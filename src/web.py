@@ -6,16 +6,23 @@ import time
 app = Flask(__name__)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 model_name = "Qwen/Qwen2-0.5B-Instruct"
+
 model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-def generate_response(prompt):
-    start_time = time.time()
+
+@app.route('/generate', methods=['POST'])
+def generate():
+    prompt = request.json.get('prompt', 'Hello')
+    instruction = request.json.get('instruction', 'You are a helpful assistant.')
+    tokens = request.json.get('tokens', 100)
+    temperature = request.json.get('temperature', 0.7)
+
+    start = time.time()
 
     messages = [
-        {"role": "system", "content": "You are a helpful assistant and only give very short one sentence answers."},
+        {"role": "system", "content": instruction},
         {"role": "user", "content": prompt}
     ]
 
@@ -36,16 +43,16 @@ def generate_response(prompt):
 
     response = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
 
-    print(f"time: {time.time() - start_time:.2f} seconds")
+    duration = time.time() - start
 
-    return response
-
-
-@app.route('/generate', methods=['POST'])
-def generate():
-    prompt = request.json.get('prompt', '')
-    response = generate_response(prompt)
-    return jsonify({'response': response})
+    return jsonify({
+        'instruction': instruction,
+        'prompt': prompt,
+        'response': response,
+        'duration': duration,
+        'tokens': tokens,
+        'temperature': temperature
+    })
 
 
 if __name__ == '__main__':
