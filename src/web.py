@@ -24,9 +24,8 @@ def generate_response(prompt):
 
     generated_ids = model.generate(
         model_inputs.input_ids,
-        max_new_tokens=25,
+        max_new_tokens=100,
         num_return_sequences=1,
-        no_repeat_ngram_size=2,
         do_sample=True,
         temperature=0.7
     )
