@@ -5,15 +5,11 @@ import time
 
 app = Flask(__name__)
 
-device = torch.device("cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model = AutoModelForCausalLM.from_pretrained(
-    "Qwen/Qwen2-1.5B-Instruct",
-    torch_dtype=torch.float32,
-    device_map="auto"
-).to(device)
-tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2-7B-Instruct")
-
+model_name = "Qwen/Qwen2-0.5B-Instruct"
+model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
+tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 def generate_response(prompt):
     start_time = time.time()
@@ -22,12 +18,9 @@ def generate_response(prompt):
         {"role": "system", "content": "You are a helpful assistant and only give very short one sentence answers."},
         {"role": "user", "content": prompt}
     ]
-    text = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True,
-    )
-    model_inputs = tokenizer([text], return_tensors="pt", padding=True).to(device)
+
+    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    model_inputs = tokenizer(text, return_tensors="pt", padding=True).to(device)
 
     generated_ids = model.generate(
         model_inputs.input_ids,
@@ -35,17 +28,17 @@ def generate_response(prompt):
         num_return_sequences=1,
         no_repeat_ngram_size=2,
         do_sample=True,
-        early_stopping=True,
         temperature=0.7
-
     )
+
     generated_ids = [
         output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
     ]
 
-    response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+    response = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
 
     print(f"time: {time.time() - start_time:.2f} seconds")
+
     return response
 
 
