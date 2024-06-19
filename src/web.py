@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify
+import flask
+from flask import Flask, request, jsonify, make_response
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 import time
@@ -12,12 +13,21 @@ model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 
-@app.route('/generate', methods=['POST'])
+@app.route("/generate", methods=["OPTIONS"])
+def preflight():
+    response = make_response()
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+    response.headers.add("Access-Control-Allow-Methods", "OPTIONS, GET, POST, PUT, DELETE")
+    response.headers.add("Access-Control-Allow-Origin", "http://localhost:81")
+    return response
+
+
+@app.route("/generate", methods=["POST"])
 def generate():
-    prompt = request.json.get('prompt', 'Hello')
-    instruction = request.json.get('instruction', 'You are a helpful assistant.')
-    tokens = request.json.get('tokens', 100)
-    temperature = request.json.get('temperature', 0.7)
+    instruction = request.json.get("instruction", "You are a helpful assistant.")
+    prompt = request.json.get("prompt", "Hello")
+    tokens = request.json.get("tokens", 100)
+    temperature = request.json.get("temperature", 0.7)
 
     start = time.time()
 
@@ -31,10 +41,10 @@ def generate():
 
     generated_ids = model.generate(
         model_inputs.input_ids,
-        max_new_tokens=100,
+        max_new_tokens=tokens,
         num_return_sequences=1,
         do_sample=True,
-        temperature=0.7
+        temperature=temperature
     )
 
     generated_ids = [
@@ -45,15 +55,19 @@ def generate():
 
     duration = time.time() - start
 
-    return jsonify({
-        'instruction': instruction,
-        'prompt': prompt,
-        'response': response,
-        'duration': duration,
-        'tokens': tokens,
-        'temperature': temperature
+    response = jsonify({
+        "instruction": instruction,
+        "prompt": prompt,
+        "response": response,
+        "duration": duration,
+        "tokens": tokens,
+        "temperature": temperature
     })
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+    response.headers.add("Access-Control-Allow-Methods", "OPTIONS, GET, POST, PUT, DELETE")
+    response.headers.add("Access-Control-Allow-Origin", "http://localhost:81")
+    return response
 
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
