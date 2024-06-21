@@ -78,7 +78,7 @@ def text_generate():
 
     if not text_active():
         return jsonify({
-            "message": "text model is not active"
+            "message": "Text model is not active"
         }), 400
 
     body = request.get_json()
@@ -140,7 +140,7 @@ def image_generate():
 
     if not image_active():
         return jsonify({
-            "message": "image model is not active"
+            "message": "Image model is not active"
         }), 400
 
     body = request.get_json()
